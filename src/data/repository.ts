@@ -49,7 +49,14 @@ async function loadFromSupabase(): Promise<LoadResult | null> {
   ].find((r) => r.error)
 
   if (firstError?.error) {
-    throw new Error(firstError.error.message)
+    const msg = firstError.error.message
+    const code = (firstError.error as { code?: string }).code
+    if (code === 'PGRST205' || /Could not find the table/i.test(msg)) {
+      throw new Error(
+        'Supabase tables are missing. In the Supabase SQL Editor, run supabase/schema.sql then supabase/seed.sql (or supabase/apply-all.sql once), then reload.',
+      )
+    }
+    throw new Error(msg)
   }
 
   const mapUser = (row: Record<string, unknown>) => ({

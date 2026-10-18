@@ -56,12 +56,15 @@ If either is missing, the app stays on the mock repository and does **not** clai
 
 ## Supabase setup (optional)
 
-1. Create a free Supabase project.
-2. In the SQL editor, run `supabase/schema.sql`.
-3. Run `supabase/seed.sql` (or regenerate with `npm run seed:sql` then run it).
-4. Enable the anon read policies already defined in the schema (synthetic demo data only).
-5. Put the project URL and **anon** key in `.env.local`.
-6. Restart `npm run dev` and confirm the banner shows `Data source: supabase`.
+1. Create a free Supabase project (or use an existing one).
+2. Copy `.env.example` → `.env.local` and set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (anon/publishable key only — never the service role).
+3. In the Supabase Dashboard → **SQL Editor**, run **one** of:
+   - `supabase/apply-all.sql` (schema + seed in a single paste), or
+   - `supabase/schema.sql` first, then `supabase/seed.sql`.
+4. Regenerate seed anytime with `npm run seed:sql` if you change the TypeScript fixtures.
+5. Restart `npm run dev` and confirm the banner shows `Data source: supabase` (no mock warning).
+
+Until the SQL has been applied, the app detects missing tables, keeps using the mock repository, and shows a setup warning. The anon key cannot create tables by itself.
 
 RLS is enabled with read-only `anon` select policies for demo tables. Do not put real customer data in this project.
 
