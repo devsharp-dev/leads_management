@@ -1,12 +1,3 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { EmptyState } from '../ui/empty-state'
 import { Card, CardTitle } from '../ui/card'
 
@@ -20,7 +11,7 @@ export function LeadFunnelChart({
   if (stages.every((s) => s.count === 0) && unqualified === 0) {
     return (
       <Card>
-        <CardTitle>Lead status distribution</CardTitle>
+        <CardTitle>Lead funnel</CardTitle>
         <div className="mt-3">
           <EmptyState message="No leads in the selected period." />
         </div>
@@ -28,25 +19,37 @@ export function LeadFunnelChart({
     )
   }
 
+  const max = Math.max(...stages.map((s) => s.count), 1)
+
   return (
     <Card>
-      <CardTitle>Lead status distribution</CardTitle>
+      <CardTitle>Lead funnel</CardTitle>
       <p className="mt-1 text-xs text-slate-500">
-        Counts by current status for leads created in range (not a sequential cohort funnel).
+        Status counts for leads created in range (distribution, not a sequential cohort).
       </p>
-      <div className="mt-3 h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={stages} layout="vertical" margin={{ left: 16, right: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis type="number" allowDecimals={false} />
-            <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Bar dataKey="count" name="Leads" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="mt-4 space-y-2">
+        {stages.map((stage, index) => {
+          const widthPct = 55 + (stage.count / max) * 45
+          return (
+            <div key={stage.key} className="flex flex-col items-center gap-1">
+              <div
+                className="flex h-10 items-center justify-between rounded-md bg-blue-500 px-3 text-sm font-medium text-white shadow-sm"
+                style={{ width: `${widthPct}%` }}
+                title={`${stage.label}: ${stage.count}`}
+              >
+                <span>{stage.label}</span>
+                <span className="tabular-nums">{stage.count}</span>
+              </div>
+              {index < stages.length - 1 ? (
+                <div className="h-2 w-px bg-slate-300" aria-hidden />
+              ) : null}
+            </div>
+          )
+        })}
       </div>
-      <p className="mt-2 text-sm text-slate-600">
-        Unqualified: <span className="font-semibold text-slate-900">{unqualified}</span>
+      <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        Unqualified:{' '}
+        <span className="font-semibold tabular-nums text-slate-900">{unqualified}</span>
       </p>
     </Card>
   )

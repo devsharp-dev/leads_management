@@ -13,14 +13,14 @@ export function LeadSourceChart({
   return (
     <Card>
       <CardTitle>Lead sources</CardTitle>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <div className="h-48">
+      <div className="mt-2">
+        <div className="mx-auto h-36 w-full max-w-[200px]">
           {data.length === 0 ? (
             <EmptyState message="No sources to show." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={data} dataKey="count" nameKey="source" innerRadius={45} outerRadius={70}>
+                <Pie data={data} dataKey="count" nameKey="source" innerRadius={36} outerRadius={56}>
                   {data.map((_, i) => (
                     <Cell key={data[i]!.source} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -30,18 +30,18 @@ export function LeadSourceChart({
             </ResponsiveContainer>
           )}
         </div>
-        <ul className="space-y-2 text-sm">
+        <ul className="mt-2 space-y-1 text-xs">
           {data.map((row, i) => (
             <li key={row.source} className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 truncate">
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2 w-2 shrink-0 rounded-full"
                   style={{ background: COLORS[i % COLORS.length] }}
                   aria-hidden
                 />
                 {row.source}
               </span>
-              <span className="tabular-nums text-slate-600">
+              <span className="shrink-0 tabular-nums text-slate-600">
                 {row.count} ({formatPercent(row.percent)})
               </span>
             </li>

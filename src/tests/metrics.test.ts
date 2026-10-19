@@ -6,6 +6,8 @@ import { SEED_ANCHOR } from '../data/seed/dataset'
 import { computeLeadKpis } from '../features/leads/lead-metrics'
 import {
   computeDealRevenueKpis,
+  filteredCollectedRevenue,
+  invoicesGenerated,
   orderBalance,
 } from '../features/deals/deal-metrics'
 import { computeQuotationKpis } from '../features/quotations/quotation-metrics'
@@ -71,5 +73,28 @@ describe('business metrics', () => {
         },
       ]),
     ).toBe(0)
+  })
+
+  it('scopes collected revenue and invoices to owner filters', () => {
+    const all = filteredCollectedRevenue(seedDataset, range, filters)
+    const ownerId = seedDataset.users.find((u) => u.role === 'sales')!.id
+    const scoped = filteredCollectedRevenue(seedDataset, range, {
+      ...filters,
+      ownerId,
+    })
+    expect(scoped).toBeLessThanOrEqual(all)
+    expect(invoicesGenerated(seedDataset, range, filters)).toBeGreaterThan(0)
+    const deals = computeDealRevenueKpis(seedDataset, range, prev, filters)
+    expect(deals.invoicesGenerated).toBe(
+      invoicesGenerated(seedDataset, range, filters),
+    )
+  })
+
+  it('excludes non-completed payments from collected revenue', () => {
+    const collected = filteredCollectedRevenue(seedDataset, range, filters)
+    const completedSum = seedDataset.payments
+      .filter((p) => p.status === 'completed' && p.paidAt)
+      .reduce((s, p) => s + p.amount, 0)
+    expect(collected).toBeLessThanOrEqual(completedSum)
   })
 })

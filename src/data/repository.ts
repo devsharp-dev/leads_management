@@ -14,6 +14,8 @@ async function loadFromSupabase(): Promise<LoadResult | null> {
   const client = getSupabaseClient()
   if (!client) return null
 
+  // Explicit range avoids silent PostgREST default page truncation.
+  const page = { from: 0, to: 4999 }
   const [
     departments,
     serviceCategories,
@@ -25,15 +27,19 @@ async function loadFromSupabase(): Promise<LoadResult | null> {
     payments,
     activity,
   ] = await Promise.all([
-    client.from('departments').select('*'),
-    client.from('service_categories').select('*'),
-    client.from('users').select('*'),
-    client.from('leads').select('*'),
-    client.from('quotations').select('*'),
-    client.from('deals').select('*'),
-    client.from('orders').select('*'),
-    client.from('payments').select('*'),
-    client.from('activity_events').select('*').order('occurred_at', { ascending: false }).limit(40),
+    client.from('departments').select('*').range(page.from, page.to),
+    client.from('service_categories').select('*').range(page.from, page.to),
+    client.from('users').select('*').range(page.from, page.to),
+    client.from('leads').select('*').range(page.from, page.to),
+    client.from('quotations').select('*').range(page.from, page.to),
+    client.from('deals').select('*').range(page.from, page.to),
+    client.from('orders').select('*').range(page.from, page.to),
+    client.from('payments').select('*').range(page.from, page.to),
+    client
+      .from('activity_events')
+      .select('*')
+      .order('occurred_at', { ascending: false })
+      .limit(40),
   ])
 
   const firstError = [

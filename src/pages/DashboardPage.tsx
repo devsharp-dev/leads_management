@@ -1,13 +1,14 @@
 import {
   CheckCircle2,
   FileText,
+  Receipt,
   Target,
   TrendingUp,
   UserMinus,
   UserPlus,
   Users,
-  Wallet,
 } from 'lucide-react'
+import { differenceInCalendarDays } from 'date-fns'
 import { useMemo } from 'react'
 import { LeadFunnelChart } from '../components/charts/lead-funnel-chart'
 import { LeadSourceChart } from '../components/charts/lead-source-chart'
@@ -73,6 +74,9 @@ export function DashboardPage({
 }) {
   const { filters, setDrill } = useFilters()
   const prev = useMemo(() => previousPeriod(filters.dateRange), [filters.dateRange])
+  const periodDays =
+    differenceInCalendarDays(filters.dateRange.end, filters.dateRange.start) + 1
+  const comparisonHint = `vs previous ${periodDays} day${periodDays === 1 ? '' : 's'}`
   const filterSlice = useMemo(
     () => ({
       ownerId: filters.ownerId,
@@ -193,12 +197,22 @@ export function DashboardPage({
         value: dealKpis.outstandingRevenue,
         previous_comparison: '',
       },
+      {
+        metric: 'Invoices generated',
+        value: dealKpis.invoicesGenerated,
+        previous_comparison: dealKpis.comparisons.invoicesGenerated.label,
+      },
+      {
+        metric: 'Collected revenue',
+        value: dealKpis.collectedRevenue,
+        previous_comparison: dealKpis.comparisons.collectedRevenue.label,
+      },
     ])
     downloadCsv(`analytics-export-${filters.dateRange.preset}.csv`, csv)
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 py-6 md:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1440px] px-3 py-4 md:px-5 lg:px-6">
       <PageHeader
         title="Business Performance & Revenue Analytics"
         description="Track your leads, conversions, quotations, deals, revenue and operations in real time."
@@ -206,32 +220,36 @@ export function DashboardPage({
 
       {warning ? (
         <div
-          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
           role="status"
         >
           Data source: <strong>{source}</strong>. {warning}
         </div>
       ) : (
-        <p className="mb-4 text-xs text-slate-500">Data source: {source}</p>
+        <p className="mb-2 text-xs text-slate-500">
+          Data source: <span className="font-medium text-emerald-700">{source}</span>
+        </p>
       )}
 
       <GlobalFiltersBar data={data} onExport={onExport} />
 
-      <section className="mt-6" aria-labelledby="kpi-heading">
+      <section className="mt-4" aria-labelledby="kpi-heading">
         <h2 id="kpi-heading" className="sr-only">
           Key performance indicators
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
           <KpiCard
             title="New leads"
             value={formatNumber(leadKpis.total)}
             comparison={leadKpis.comparisons.total}
+            comparisonHint={comparisonHint}
             icon={<UserPlus className="h-4 w-4" />}
           />
           <KpiCard
             title="Qualified leads"
             value={formatNumber(leadKpis.qualified)}
             comparison={leadKpis.comparisons.qualified}
+            comparisonHint={comparisonHint}
             subStat={`${formatPercent(leadKpis.qualifiedRate)} qualified`}
             icon={<Users className="h-4 w-4" />}
           />
@@ -239,6 +257,7 @@ export function DashboardPage({
             title="Converted leads"
             value={formatNumber(leadKpis.converted)}
             comparison={leadKpis.comparisons.converted}
+            comparisonHint={comparisonHint}
             subStat={`${formatPercent(leadKpis.conversionRate)} conversion`}
             icon={<CheckCircle2 className="h-4 w-4" />}
           />
@@ -246,6 +265,7 @@ export function DashboardPage({
             title="Unqualified leads"
             value={formatNumber(leadKpis.unqualified)}
             comparison={leadKpis.comparisons.unqualified}
+            comparisonHint={comparisonHint}
             subStat={`${formatPercent(leadKpis.unqualifiedRate)} unqualified`}
             icon={<UserMinus className="h-4 w-4" />}
           />
@@ -253,79 +273,87 @@ export function DashboardPage({
             title="Conversion rate"
             value={formatPercent(leadKpis.conversionRate)}
             comparison={leadKpis.comparisons.conversionRate}
+            comparisonHint={comparisonHint}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <KpiCard
             title="Quotations created"
             value={formatNumber(quoteKpis.created)}
             comparison={quoteKpis.comparisons.created}
+            comparisonHint={comparisonHint}
             icon={<FileText className="h-4 w-4" />}
           />
           <KpiCard
             title="Deals created"
             value={formatNumber(dealKpis.dealsCreated)}
             comparison={dealKpis.comparisons.dealsCreated}
+            comparisonHint={comparisonHint}
             icon={<Target className="h-4 w-4" />}
           />
           <KpiCard
-            title="Collected revenue"
-            value={formatINR(dealKpis.collectedRevenue)}
-            comparison={dealKpis.comparisons.collectedRevenue}
-            icon={<Wallet className="h-4 w-4" />}
+            title="Invoices generated"
+            value={formatNumber(dealKpis.invoicesGenerated)}
+            comparison={dealKpis.comparisons.invoicesGenerated}
+            comparisonHint={comparisonHint}
+            icon={<Receipt className="h-4 w-4" />}
           />
         </div>
       </section>
 
-      <section className="mt-8" aria-labelledby="lead-analytics">
-        <h2 id="lead-analytics" className="mb-3 text-lg font-semibold text-slate-900">
+      <section className="mt-5" aria-labelledby="lead-analytics">
+        <h2 id="lead-analytics" className="mb-2 text-base font-semibold text-slate-900">
           Lead analytics
         </h2>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-          <Card>
-            <CardTitle>Target achievement</CardTitle>
-            <p className="mt-1 text-xs text-slate-500">
-              Monthly revenue target {formatINR(data.monthlyRevenueTarget)}
-            </p>
-            <div className="mt-4">
-              <div className="mb-2 flex justify-between text-sm">
-                <span>Achieved</span>
-                <span className="font-medium">
-                  {formatINR(targetAchieved)} ({formatPercent(targetPct)})
-                </span>
-              </div>
-              <div
-                className="h-3 overflow-hidden rounded-full bg-slate-100"
-                role="progressbar"
-                aria-valuenow={Math.round(targetPct)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Target achievement"
-              >
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width]"
-                  style={{ width: `${targetPct}%` }}
-                />
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                Remaining: {formatINR(remaining)} ({formatPercent(100 - targetPct)})
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+          <div className="lg:col-span-3">
+            <Card>
+              <CardTitle>Target achievement</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">
+                Monthly revenue target {formatINR(data.monthlyRevenueTarget)}
               </p>
-            </div>
-          </Card>
-          <LeadFunnelChart stages={funnel.stages} unqualified={funnel.unqualified} />
-          <div className="lg:col-span-2">
+              <div className="mt-3">
+                <div className="mb-2 flex justify-between text-sm">
+                  <span>Achieved</span>
+                  <span className="font-medium">
+                    {formatINR(targetAchieved)} ({formatPercent(targetPct)})
+                  </span>
+                </div>
+                <div
+                  className="h-3 overflow-hidden rounded-full bg-slate-100"
+                  role="progressbar"
+                  aria-valuenow={Math.round(targetPct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Target achievement"
+                >
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-[width]"
+                    style={{ width: `${targetPct}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Remaining: {formatINR(remaining)} ({formatPercent(100 - targetPct)})
+                </p>
+              </div>
+            </Card>
+          </div>
+          <div className="lg:col-span-3">
+            <LeadFunnelChart stages={funnel.stages} unqualified={funnel.unqualified} />
+          </div>
+          <div className="lg:col-span-4">
             <LeadTrendChart data={trend} />
           </div>
-        </div>
-        <div className="mt-4 max-w-xl">
-          <LeadSourceChart data={sources} />
+          <div className="lg:col-span-2">
+            <LeadSourceChart data={sources} />
+          </div>
         </div>
       </section>
 
-      <section className="mt-8" aria-labelledby="quote-analytics">
-        <h2 id="quote-analytics" className="mb-3 text-lg font-semibold text-slate-900">
+      <section className="mt-5" aria-labelledby="quote-analytics">
+        <h2 id="quote-analytics" className="mb-2 text-base font-semibold text-slate-900">
           Quotation analytics
         </h2>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <QuotationsByServiceChart data={quoteByService} />
           <QuotationValueChart data={quoteValues} />
           <QuoteToDealGauge
@@ -334,13 +362,14 @@ export function DashboardPage({
             quotations={quoteKpis.created}
           />
         </div>
-        <Card className="mt-4">
+        <Card className="mt-3">
           <CardTitle>Service-wise quotation details</CardTitle>
-          <div className="mt-3">
+          <div className="mt-2">
             <DataTable
               rows={quoteByService.map((r) => ({ ...r, id: r.categoryId }))}
               searchKeys={(r) => r.name}
               searchPlaceholder="Search services…"
+              pageSize={6}
               columns={[
                 { key: 'name', header: 'Service / order', sortable: true, sortValue: (r) => r.name, render: (r) => r.name },
                 { key: 'count', header: 'Quotations', sortable: true, sortValue: (r) => r.count, render: (r) => formatNumber(r.count) },
@@ -361,15 +390,15 @@ export function DashboardPage({
         </Card>
       </section>
 
-      <section className="mt-8" aria-labelledby="deals-revenue">
-        <h2 id="deals-revenue" className="mb-3 text-lg font-semibold text-slate-900">
+      <section className="mt-5" aria-labelledby="deals-revenue">
+        <h2 id="deals-revenue" className="mb-2 text-base font-semibold text-slate-900">
           Deals &amp; revenue
         </h2>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <DealsVsRevenueChart data={dealsService} />
           <RevenueByServiceChart data={revByService} />
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
           <Card>
             <CardTitle>Priority breakdown</CardTitle>
             <p className="mt-1 text-xs text-slate-500">Share of deal value by priority.</p>
@@ -408,33 +437,34 @@ export function DashboardPage({
           <Card>
             <CardTitle>Collected vs outstanding</CardTitle>
             <p className="mt-3 text-lg font-semibold text-emerald-700">
-              Collected: {formatINR(dealKpis.collectedRevenue)}
+              Net collected: {formatINR(dealKpis.collectedRevenue)}
             </p>
             <p className="mt-1 text-lg font-semibold text-amber-700">
               Outstanding: {formatINR(dealKpis.outstandingRevenue)}
             </p>
             <p className="mt-2 text-xs text-slate-500">
-              Collected uses successful payments by paid date. Outstanding is order balance for
-              deals created in range.
+              Collected = completed payments by paid date (filter-scoped). Outstanding = order
+              balances for deals created in range.
             </p>
           </Card>
         </div>
-        <div className="mt-4">
+        <div className="mt-3">
           <DailyRevenueTrendChart data={dailyRev} />
         </div>
       </section>
 
-      <section className="mt-8" aria-labelledby="ops">
-        <h2 id="ops" className="mb-3 text-lg font-semibold text-slate-900">
+      <section className="mt-5" aria-labelledby="ops">
+        <h2 id="ops" className="mb-2 text-base font-semibold text-slate-900">
           Team activity &amp; operations
         </h2>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           <Card>
             <CardTitle>Sales team activity</CardTitle>
-            <div className="mt-3">
+            <div className="mt-2">
               <DataTable
                 rows={sales.map((r) => ({ ...r, id: r.userId }))}
                 searchKeys={(r) => r.name}
+                pageSize={6}
                 columns={[
                   { key: 'name', header: 'User', render: (r) => r.name },
                   { key: 'leads', header: 'Leads', render: (r) => r.leadsHandled },
@@ -455,9 +485,10 @@ export function DashboardPage({
           </Card>
           <Card>
             <CardTitle>Operations team activity</CardTitle>
-            <div className="mt-3">
+            <div className="mt-2">
               <DataTable
                 rows={ops.map((r) => ({ ...r, id: r.userId }))}
+                pageSize={6}
                 columns={[
                   { key: 'name', header: 'User', render: (r) => r.name },
                   { key: 'orders', header: 'Orders updated', render: (r) => r.ordersUpdated },
@@ -469,13 +500,14 @@ export function DashboardPage({
             </div>
           </Card>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
           <OrderProgressChart data={orderProgress} />
           <Card>
             <CardTitle>Recent CRM activity</CardTitle>
-            <div className="mt-3">
+            <div className="mt-2">
               <DataTable
                 rows={data.activity}
+                pageSize={8}
                 onRowClick={(row) =>
                   setDrill({
                     type: row.entityType,
@@ -502,63 +534,93 @@ export function DashboardPage({
         </div>
       </section>
 
-      <section className="mt-8 mb-10" aria-labelledby="payments">
-        <h2 id="payments" className="mb-3 text-lg font-semibold text-slate-900">
-          Payment history
+      <section className="mt-5 mb-8" aria-labelledby="payments">
+        <h2 id="payments" className="mb-2 text-base font-semibold text-slate-900">
+          Payment history &amp; leads
         </h2>
-        <Card>
-          <DataTable
-            rows={payments}
-            searchKeys={(r) => `${r.reference} ${r.orderReference} ${r.status} ${r.method}`}
-            searchPlaceholder="Search payments…"
-            onRowClick={(row) => setDrill({ type: 'payment', id: row.id })}
-            columns={[
-              { key: 'ref', header: 'Payment', sortable: true, sortValue: (r) => r.reference, render: (r) => r.reference },
-              { key: 'order', header: 'Order', render: (r) => r.orderReference },
-              { key: 'deal', header: 'Deal', render: (r) => r.dealReference },
-              {
-                key: 'amount',
-                header: 'Amount',
-                sortable: true,
-                sortValue: (r) => r.amount,
-                render: (r) => formatINR(r.amount),
-              },
-              { key: 'status', header: 'Status', render: (r) => r.status },
-              { key: 'method', header: 'Method', render: (r) => r.method },
-              {
-                key: 'paid',
-                header: 'Paid at',
-                render: (r) => (r.paidAt ? formatDateTime(r.paidAt) : '—'),
-              },
-            ]}
-          />
-          <div className="mt-4">
-            <h3 className="mb-2 text-sm font-semibold">Browse leads (drill-down)</h3>
-            <DataTable
-              rows={data.leads
-                .filter(
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <Card>
+            <CardTitle>Payments</CardTitle>
+            <div className="mt-2">
+              <DataTable
+                rows={payments}
+                searchKeys={(r) => `${r.reference} ${r.orderReference} ${r.status} ${r.method}`}
+                searchPlaceholder="Search payments…"
+                statusValue={(r) => r.status}
+                statusOptions={[
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'failed', label: 'Failed' },
+                  { value: 'refunded', label: 'Refunded' },
+                ]}
+                pageSize={8}
+                onRowClick={(row) => setDrill({ type: 'payment', id: row.id })}
+                columns={[
+                  {
+                    key: 'ref',
+                    header: 'Payment',
+                    sortable: true,
+                    sortValue: (r) => r.reference,
+                    render: (r) => r.reference,
+                  },
+                  { key: 'order', header: 'Order', render: (r) => r.orderReference },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    sortable: true,
+                    sortValue: (r) => r.amount,
+                    render: (r) => formatINR(r.amount),
+                  },
+                  { key: 'status', header: 'Status', render: (r) => r.status },
+                  {
+                    key: 'paid',
+                    header: 'Paid at',
+                    render: (r) => (r.paidAt ? formatDateTime(r.paidAt) : '—'),
+                  },
+                ]}
+              />
+            </div>
+          </Card>
+          <Card>
+            <CardTitle>Leads (drill-down)</CardTitle>
+            <div className="mt-2">
+              <DataTable
+                rows={data.leads.filter(
                   (l) =>
                     isWithinRange(l.createdAt, filters.dateRange) &&
-                    (filters.ownerId === 'all' || l.ownerId === filters.ownerId),
-                )
-                .slice(0, 40)}
-              searchKeys={(r) => `${r.name} ${r.company ?? ''} ${r.source} ${r.status}`}
-              searchPlaceholder="Search leads…"
-              onRowClick={(row) => setDrill({ type: 'lead', id: row.id })}
-              columns={[
-                { key: 'name', header: 'Lead', render: (r) => r.name },
-                { key: 'company', header: 'Company', render: (r) => r.company ?? '—' },
-                { key: 'source', header: 'Source', render: (r) => r.source },
-                { key: 'status', header: 'Status', render: (r) => r.status },
-                {
-                  key: 'owner',
-                  header: 'Owner',
-                  render: (r) => data.users.find((u) => u.id === r.ownerId)?.name ?? r.ownerId,
-                },
-              ]}
-            />
-          </div>
-        </Card>
+                    (filters.ownerId === 'all' || l.ownerId === filters.ownerId) &&
+                    (filters.departmentId === 'all' ||
+                      !l.departmentId ||
+                      l.departmentId === filters.departmentId),
+                )}
+                searchKeys={(r) => `${r.name} ${r.company ?? ''} ${r.source} ${r.status}`}
+                searchPlaceholder="Search leads…"
+                statusValue={(r) => r.status}
+                statusOptions={[
+                  { value: 'new', label: 'New' },
+                  { value: 'contacted', label: 'Contacted' },
+                  { value: 'qualified', label: 'Qualified' },
+                  { value: 'converted', label: 'Converted' },
+                  { value: 'unqualified', label: 'Unqualified' },
+                ]}
+                pageSize={8}
+                onRowClick={(row) => setDrill({ type: 'lead', id: row.id })}
+                columns={[
+                  { key: 'name', header: 'Lead', render: (r) => r.name },
+                  { key: 'company', header: 'Company', render: (r) => r.company ?? '—' },
+                  { key: 'source', header: 'Source', render: (r) => r.source },
+                  { key: 'status', header: 'Status', render: (r) => r.status },
+                  {
+                    key: 'owner',
+                    header: 'Owner',
+                    render: (r) =>
+                      data.users.find((u) => u.id === r.ownerId)?.name ?? r.ownerId,
+                  },
+                ]}
+              />
+            </div>
+          </Card>
+        </div>
       </section>
 
       <RecordDrawer data={data} />

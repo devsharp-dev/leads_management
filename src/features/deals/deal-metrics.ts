@@ -23,6 +23,62 @@ export function orderBalance(
   return Math.max(orderTotal - collected + refunded, 0)
 }
 
+function dealMatchesFilters(
+  deal: AnalyticsDataset['deals'][number],
+  filters: Pick<GlobalFilters, 'ownerId' | 'departmentId' | 'serviceCategoryId'>,
+  cats: Map<string, { departmentId?: string }>,
+): boolean {
+  if (filters.ownerId !== 'all' && deal.ownerId !== filters.ownerId) return false
+  if (
+    filters.serviceCategoryId !== 'all' &&
+    deal.serviceCategoryId !== filters.serviceCategoryId
+  ) {
+    return false
+  }
+  if (filters.departmentId !== 'all') {
+    const dept = cats.get(deal.serviceCategoryId)?.departmentId
+    if (dept && dept !== filters.departmentId) return false
+  }
+  return true
+}
+
+/** Completed payments in range whose parent deal matches global filters. */
+export function filteredCollectedRevenue(
+  data: AnalyticsDataset,
+  range: Pick<DateRange, 'start' | 'end'>,
+  filters: Pick<GlobalFilters, 'ownerId' | 'departmentId' | 'serviceCategoryId'>,
+): number {
+  const cats = categoryMap(data)
+  const dealById = new Map(data.deals.map((d) => [d.id, d]))
+  const orderById = new Map(data.orders.map((o) => [o.id, o]))
+  return completedPayments(data.payments)
+    .filter((p) => {
+      if (!isWithinRange(p.paidAt, range)) return false
+      const order = orderById.get(p.orderId)
+      if (!order) return false
+      const deal = dealById.get(order.dealId)
+      if (!deal) return false
+      return dealMatchesFilters(deal, filters, cats)
+    })
+    .reduce((s, p) => s + p.amount, 0)
+}
+
+/** Orders created in range (invoices), scoped by parent deal filters. */
+export function invoicesGenerated(
+  data: AnalyticsDataset,
+  range: Pick<DateRange, 'start' | 'end'>,
+  filters: Pick<GlobalFilters, 'ownerId' | 'departmentId' | 'serviceCategoryId'>,
+): number {
+  const cats = categoryMap(data)
+  const dealById = new Map(data.deals.map((d) => [d.id, d]))
+  return data.orders.filter((o) => {
+    if (!isWithinRange(o.createdAt, range)) return false
+    const deal = dealById.get(o.dealId)
+    if (!deal) return false
+    return dealMatchesFilters(deal, filters, cats)
+  }).length
+}
+
 export function computeDealRevenueKpis(
   data: AnalyticsDataset,
   range: DateRange,
@@ -35,12 +91,10 @@ export function computeDealRevenueKpis(
   const totalDealValue = deals.reduce((s, d) => s + d.value, 0)
   const prevDealValue = prevDeals.reduce((s, d) => s + d.value, 0)
 
-  const collected = completedPayments(data.payments)
-    .filter((p) => isWithinRange(p.paidAt, range))
-    .reduce((s, p) => s + p.amount, 0)
-  const prevCollected = completedPayments(data.payments)
-    .filter((p) => isWithinRange(p.paidAt, previous))
-    .reduce((s, p) => s + p.amount, 0)
+  const collected = filteredCollectedRevenue(data, range, filters)
+  const prevCollected = filteredCollectedRevenue(data, previous, filters)
+  const invoices = invoicesGenerated(data, range, filters)
+  const prevInvoices = invoicesGenerated(data, previous, filters)
 
   // Outstanding: balances for orders belonging to deals created in range
   const dealIds = new Set(deals.map((d) => d.id))
@@ -55,10 +109,12 @@ export function computeDealRevenueKpis(
     totalDealValue,
     collectedRevenue: collected,
     outstandingRevenue: outstanding,
+    invoicesGenerated: invoices,
     comparisons: {
       dealsCreated: compareValues(deals.length, prevDeals.length),
       totalDealValue: compareValues(totalDealValue, prevDealValue),
       collectedRevenue: compareValues(collected, prevCollected),
+      invoicesGenerated: compareValues(invoices, prevInvoices),
     },
   }
 }
